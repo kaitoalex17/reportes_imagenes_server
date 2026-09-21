@@ -90,6 +90,80 @@ function extractString(field, defaultVal) {
     return defaultVal;
 }
 
+/**
+ * Registra una orden procesada en Firestore bajo configuracion/ordenesImagenes/ordenes/{numeroOrden}
+ * y actualiza el documento resumen configuracion/ordenesImagenes
+ */
+async function registerOrderInFirestore(orderData) {
+    const {
+        numeroOrden,
+        carpeta,
+        urlCarpeta,
+        pdfGenerado,
+        urlPdf,
+        totalImagenes,
+        fechaCreacion,
+        fechaExpiracionImagenes,
+        fechaExpiracionPdf
+    } = orderData;
+
+    if (!numeroOrden) return;
+
+    try {
+        const safeOrder = encodeURIComponent(numeroOrden);
+        const orderDocUrl = `https://firestore.googleapis.com/v1/projects/${PROJECT_ID}/databases/(default)/documents/${COLLECTION}/ordenesImagenes/ordenes/${safeOrder}`;
+
+        const payload = {
+            fields: {
+                numeroOrden: { stringValue: numeroOrden },
+                carpeta: { stringValue: carpeta || `storage/images/${numeroOrden}` },
+                urlCarpeta: { stringValue: urlCarpeta || `https://apimg.instala.net/storage/images/${numeroOrden}` },
+                pdfGenerado: { stringValue: pdfGenerado || '' },
+                urlPdf: { stringValue: urlPdf || '' },
+                totalImagenes: { integerValue: String(totalImagenes || 0) },
+                fechaCreacion: { timestampValue: fechaCreacion || new Date().toISOString() },
+                fechaExpiracionImagenes: { timestampValue: fechaExpiracionImagenes || new Date(Date.now() + 15 * 86400000).toISOString() },
+                fechaExpiracionPdf: { timestampValue: fechaExpiracionPdf || new Date(Date.now() + 7 * 86400000).toISOString() },
+                estado: { stringValue: 'activo' }
+            }
+        };
+
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 5000);
+
+        const res = await fetch(orderDocUrl, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload),
+            signal: controller.signal
+        });
+        clearTimeout(timeout);
+
+        if (res.ok) {
+            console.log(`[Firestore] Orden ${numeroOrden} registrada con éxito en ${COLLECTION}/ordenesImagenes/ordenes/`);
+        } else {
+            console.warn(`[Firestore] Aviso al registrar orden en Firestore (${res.status})`);
+        }
+
+        // Resumen en el documento configuracion/ordenesImagenes
+        const parentDocUrl = `https://firestore.googleapis.com/v1/projects/${PROJECT_ID}/databases/(default)/documents/${COLLECTION}/ordenesImagenes?updateMask.fieldPaths=ultimaOrden&updateMask.fieldPaths=ultimaActualizacion`;
+        await fetch(parentDocUrl, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                fields: {
+                    ultimaOrden: { stringValue: numeroOrden },
+                    ultimaActualizacion: { timestampValue: new Date().toISOString() }
+                }
+            })
+        }).catch(() => {});
+
+    } catch (err) {
+        console.warn(`[Firestore] Error al registrar orden ${numeroOrden}:`, err.message);
+    }
+}
+
 module.exports = {
-    getActiveConfig
+    getActiveConfig,
+    registerOrderInFirestore
 };

@@ -13,7 +13,7 @@ const {
     IMAGES_DIR, 
     PDFS_DIR 
 } = require('./cleanupService');
-const { getActiveConfig } = require('./firestoreService');
+const { getActiveConfig, registerOrderInFirestore } = require('./firestoreService');
 
 const app = express();
 const PORT = process.env.PORT || 3394;
@@ -41,7 +41,8 @@ const upload = multer({
     limits: { fileSize: MAX_SIZE_MB * 1024 * 1024 }
 });
 
-// Servir estáticos opcionales para acceso directo a imágenes y PDFs
+// Servir estáticos para acceso directo a imágenes y PDFs de cada orden
+app.use('/storage/images', express.static(IMAGES_DIR));
 app.use('/storage/pdfs', express.static(PDFS_DIR));
 
 // =====================================================================
@@ -108,20 +109,27 @@ app.post('/api/crear-pdf', upload.any(), async (req, res) => {
     const config = await getActiveConfig();
 
     try {
-        const { html_content, nombre_archivo, report_data } = req.body;
+        const { html_content, nombre_archivo, report_data, numero_orden } = req.body;
         const sessionStamp = Date.now();
         const baseName = (nombre_archivo || `Informe_${sessionStamp}`).replace(/[^a-zA-Z0-9_\-\.]/g, '_');
 
-        // 1. Crear carpeta para retención de fotos (15 días) si vienen archivos o Base64
-        const sessionImageDir = path.join(IMAGES_DIR, `${baseName}_${sessionStamp}`);
+        // Extraer número de orden formal para organizar el almacenamiento en carpeta
+        let rawOrder = numero_orden;
+        if (!rawOrder && nombre_archivo) {
+            rawOrder = nombre_archivo.replace(/^Informe_/i, '').replace(/_Parte\d+$/i, '');
+        }
+        const safeOrderNumber = String(rawOrder || 'OT_GENERAL').trim().replace(/[^a-zA-Z0-9_\-]/g, '_') || 'OT_GENERAL';
+
+        // 1. Crear carpeta exclusiva por número de orden para retención de fotos (15 días)
+        const orderImageDir = path.join(IMAGES_DIR, safeOrderNumber);
+        fs.mkdirSync(orderImageDir, { recursive: true });
         let savedImagesCount = 0;
 
         // Si vienen archivos multipart desde FormData
         if (req.files && req.files.length > 0) {
-            fs.mkdirSync(sessionImageDir, { recursive: true });
             for (const file of req.files) {
                 const imgExt = path.extname(file.originalname) || '.jpg';
-                const imgPath = path.join(sessionImageDir, `${file.fieldname}${imgExt}`);
+                const imgPath = path.join(orderImageDir, `${file.fieldname}${imgExt}`);
                 fs.writeFileSync(imgPath, file.buffer);
                 savedImagesCount++;
             }
@@ -135,8 +143,11 @@ app.post('/api/crear-pdf', upload.any(), async (req, res) => {
             pdfResult = await compileHtmlToPdf(html_content, baseName);
 
             // Extraer y respaldar imágenes en Base64 en disco para cumplir retención de 15 días
-            backupBase64ImagesFromHtml(html_content, sessionImageDir).then(count => {
-                if (count > 0) console.log(`[Storage] Respaldadas ${count} imágenes Base64 en: ${sessionImageDir}`);
+            backupBase64ImagesFromHtml(html_content, orderImageDir).then(count => {
+                if (count > 0) {
+                    savedImagesCount += count;
+                    console.log(`[Storage] Respaldadas ${count} fotos en la carpeta de la orden: ${orderImageDir}`);
+                }
             }).catch(() => {});
 
         } else if (report_data) {
@@ -147,6 +158,25 @@ app.post('/api/crear-pdf', upload.any(), async (req, res) => {
         } else {
             return res.status(400).json({ error: 'Falta el campo requerido "html_content" o "report_data".' });
         }
+
+        // Guardar copia del PDF dentro de la carpeta de la orden para que vayan acompañadas
+        try {
+            const pdfCopyInOrder = path.join(orderImageDir, pdfResult.pdfFileName);
+            fs.copyFileSync(pdfResult.pdfPath, pdfCopyInOrder);
+        } catch (e) { /* ignorar */ }
+
+        // Registrar la orden en Firestore justo debajo de configuracion/ordenesImagenes
+        registerOrderInFirestore({
+            numeroOrden: safeOrderNumber,
+            carpeta: `storage/images/${safeOrderNumber}`,
+            urlCarpeta: `https://apimg.instala.net/storage/images/${safeOrderNumber}`,
+            pdfGenerado: pdfResult.pdfFileName,
+            urlPdf: `https://apimg.instala.net/api/descargar-pdf/${pdfResult.pdfFileName}`,
+            totalImagenes: savedImagesCount || 1,
+            fechaCreacion: new Date().toISOString(),
+            fechaExpiracionImagenes: new Date(Date.now() + (config.diasRetencionImagenes || 15) * 86400000).toISOString(),
+            fechaExpiracionPdf: new Date(Date.now() + (config.diasRetencionPdfs || 7) * 86400000).toISOString()
+        }).catch(err => console.warn('[Firestore] Error registrando orden:', err.message));
 
         // 3. Comprobar alerta de tamaño en MB
         const sizeMb = parseFloat(pdfResult.sizeMb);

@@ -289,6 +289,45 @@ Ejecuta la purga inmediata de todos los archivos cuyas marcas temporales excedan
 
 ---
 
+## Organización de Imágenes y Registro en Cloud Firestore
+
+### 1. Estructura de Carpetas por Número de Orden en el Servidor
+Las fotografías procesadas se agrupan en una carpeta exclusiva identificada con el número de orden de trabajo (OT):
+
+```text
+storage/
+└── images/
+    └── OT-40912/
+        ├── foto_01.jpg
+        ├── foto_02.jpg
+        ├── foto_03.jpg
+        └── Informe_OT-40912.pdf
+```
+- Acceso directo vía URL: `https://apimg.instala.net/storage/images/OT-40912/foto_01.jpg`
+- Las fotos y el PDF generado se conservan juntos en la carpeta de la orden durante la ventana de retención configurada (15 días para fotos y 7 días para el PDF).
+
+### 2. Registro en Cloud Firestore (Debajo de `configuracion`)
+Cada orden procesada se registra automáticamente en Cloud Firestore:
+
+- **Colección raíz:** `configuracion`
+- **Documento principal:** `ordenesImagenes` (resumen de última orden y fecha)
+- **Subcolección:** `ordenes`
+- **ID de documento:** `{numeroOrden}` (ej: `OT-40912`)
+
+Campos registrados:
+- `numeroOrden`: Identificador de la orden (ej: `OT-40912`).
+- `carpeta`: Ruta interna (`storage/images/OT-40912`).
+- `urlCarpeta`: Enlace HTTP público (`https://apimg.instala.net/storage/images/OT-40912`).
+- `pdfGenerado`: Nombre del archivo compilado (`Informe_OT-40912.pdf`).
+- `urlPdf`: URL de descarga (`https://apimg.instala.net/api/descargar-pdf/Informe_OT-40912.pdf`).
+- `totalImagenes`: Número de fotografías del informe.
+- `fechaCreacion`: Marca de tiempo ISO de creación.
+- `fechaExpiracionImagenes`: Fecha límite tras los 15 días de retención.
+- `fechaExpiracionPdf`: Fecha límite tras los 7 días de retención.
+- `estado`: `activo`.
+
+---
+
 ## Sincronización con el Panel PEX
 
 La configuración de retención y límites se sincroniza automáticamente con la página de administración:
