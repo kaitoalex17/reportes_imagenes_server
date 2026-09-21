@@ -62,10 +62,10 @@ async function compileHtmlToPdf(htmlContent, outputFileName) {
         await page.setViewport({ width: 1240, height: 1754, deviceScaleFactor: 1 });
         await page.emulateMediaType('print');
 
-        // Cargar HTML
+        // Cargar HTML sin esperar conexiones externas (las imágenes vienen en Base64)
         await page.setContent(htmlContent, {
-            waitUntil: ['load', 'domcontentloaded', 'networkidle0'],
-            timeout: 60000
+            waitUntil: ['load', 'domcontentloaded'],
+            timeout: 30000
         });
 
         // Configuración de exportación PDF
