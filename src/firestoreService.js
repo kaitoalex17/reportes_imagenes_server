@@ -40,7 +40,7 @@ async function getActiveConfig(forceRefresh = false) {
             cachedConfig = {
                 diasRetencionImagenes: extractNumber(fields.diasRetencionImagenes, Number(process.env.RETENTION_DAYS_IMAGES) || 15),
                 diasRetencionPdfs: extractNumber(fields.diasRetencionPdfs, Number(process.env.RETENTION_DAYS_PDFS) || 7),
-                servidorApi: extractString(fields.servidorApi, `http://localhost:${process.env.PORT || 3394}/api/crear-pdf`),
+                servidorApi: extractString(fields.servidorApi, process.env.PUBLIC_API_URL || 'https://apimg.instala.net/api/crear-pdf'),
                 calidadImagen: extractNumber(fields.calidadImagen, 0.85),
                 logoPdf: extractString(fields.logoPdf, 'netdata'),
                 maxImagenes: extractNumber(fields.maxImagenes, 25),
@@ -63,7 +63,7 @@ async function getActiveConfig(forceRefresh = false) {
         cachedConfig = {
             diasRetencionImagenes: Number(process.env.RETENTION_DAYS_IMAGES) || 15,
             diasRetencionPdfs: Number(process.env.RETENTION_DAYS_PDFS) || 7,
-            servidorApi: `http://localhost:${process.env.PORT || 3394}/api/crear-pdf`,
+            servidorApi: process.env.PUBLIC_API_URL || 'https://apimg.instala.net/api/crear-pdf',
             calidadImagen: 0.85,
             logoPdf: 'netdata',
             maxImagenes: 25,

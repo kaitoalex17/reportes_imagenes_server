@@ -105,24 +105,24 @@ Haz clic en **Deploy the stack**. Portainer iniciará el contenedor y comenzará
 
 ## Configuración de Nginx (Reverse Proxy)
 
-Para exponer el servicio con certificado SSL y conectarlo con tu subdominio (ejemplo: `reportes-api.tudominio.com`), añade el siguiente bloque de configuración en Nginx:
+Para exponer el servicio con certificado SSL y conectarlo con tu subdominio oficial (`https://apimg.instala.net/`), añade el siguiente bloque de configuración en Nginx:
 
 ```nginx
-# /etc/nginx/sites-available/reportes-api.conf
+# /etc/nginx/sites-available/apimg.instala.net.conf
 
 server {
     listen 80;
-    server_name reportes-api.tudominio.com;
+    server_name apimg.instala.net;
     return 301 https://$host$request_uri;
 }
 
 server {
     listen 443 ssl http2;
-    server_name reportes-api.tudominio.com;
+    server_name apimg.instala.net;
 
     # Certificados SSL (Let's Encrypt o Cloudflare Origin CA)
-    ssl_certificate /etc/letsencrypt/live/reportes-api.tudominio.com/fullchain.pem;
-    ssl_certificate_key /etc/letsencrypt/live/reportes-api.tudominio.com/privkey.pem;
+    ssl_certificate /etc/letsencrypt/live/apimg.instala.net/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/apimg.instala.net/privkey.pem;
 
     ssl_protocols TLSv1.2 TLSv1.3;
     ssl_ciphers HIGH:!aNULL:!MD5;
@@ -155,7 +155,7 @@ server {
 
 Habilita el sitio y recarga Nginx:
 ```bash
-ln -s /etc/nginx/sites-available/reportes-api.conf /etc/nginx/sites-enabled/
+ln -s /etc/nginx/sites-available/apimg.instala.net.conf /etc/nginx/sites-enabled/
 nginx -t && systemctl reload nginx
 ```
 
@@ -167,9 +167,9 @@ Si el tráfico pasa a través de Cloudflare hacia tu servidor:
 
 1. **Registro DNS:**
    - Tipo: `A` o `CNAME`.
-   - Nombre: `reportes-api` (o el subdominio elegido).
-   - Contenido: IP pública de tu servidor.
-   - Proxy status: **Proxied** (nube naranja).
+   - Nombre: `apimg` (en el dominio `instala.net`).
+   - Contenido: IP pública de tu servidor Linux.
+   - Proxy status: **Proxied** (nube naranja activada).
 
 2. **Ajustes de SSL/TLS:**
    - Modo de cifrado: **Full (strict)** si tienes certificado en Nginx, o **Full**.
@@ -177,14 +177,13 @@ Si el tráfico pasa a través de Cloudflare hacia tu servidor:
 3. **Límite de subida de archivos (Client Upload Limits):**
    - En planes gratuitos, el límite de subida por petición es de **100 MB**. Las fotos redimensionadas por canvas en el cliente frontend PEX se comprimen previamente para asegurar que nunca superen este umbral.
 
-4. **Túneles Cloudflare (Opcional):**
-   - Si no deseas abrir puertos en tu router, puedes configurar un `cloudflared tunnel`:
-     ```yaml
-     ingress:
-       - hostname: reportes-api.tudominio.com
-         service: http://localhost:3394
-       - service: http_status:404
-     ```
+4. **Túneles Cloudflare (Opcional si usas cloudflared):**
+   ```yaml
+   ingress:
+     - hostname: apimg.instala.net
+       service: http://localhost:3394
+     - service: http_status:404
+   ```
 
 ---
 
@@ -262,7 +261,7 @@ Content-Type: multipart/form-data
 
 **Ejemplo con cURL:**
 ```bash
-curl -X POST http://localhost:3394/api/crear-pdf \
+curl -X POST https://apimg.instala.net/api/crear-pdf \
   -F "nombre_archivo=Informe_OT-40912" \
   -F "html_content=@reporte.html" \
   --output Informe_OT-40912.pdf
