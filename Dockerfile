@@ -34,14 +34,10 @@ RUN npm install --omit=dev --no-audit --no-fund
 # 4. Copiar código fuente
 COPY src/ ./src/
 
-# 5. Crear directorios de almacenamiento y ajustar permisos para usuario no-root
-RUN mkdir -p /app/storage/images /app/storage/pdfs /app/storage/temp \
-    && chown -R node:node /app
+# 5. Crear directorios de almacenamiento
+RUN mkdir -p /app/storage/images /app/storage/pdfs /app/storage/temp && chmod -R 777 /app/storage
 
-# 6. Cambiar al usuario sin privilegios 'node' por seguridad
-USER node
-
-# 7. Exponer puerto 3394
+# 6. Exponer puerto 3394
 EXPOSE 3394
 
 # 8. Verificación de salud periódica

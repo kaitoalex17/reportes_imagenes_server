@@ -104,7 +104,7 @@ app.get('/api/descargar-pdf/:nombre', (req, res) => {
 // Compatible con procesado-imagen-v3.html y el servidor original
 // =====================================================================
 
-app.post('/api/crear-pdf', upload.any(), async (req, res) => {
+const handleCreatePdf = async (req, res) => {
     const startTime = Date.now();
     const config = await getActiveConfig();
 
@@ -201,7 +201,9 @@ app.post('/api/crear-pdf', upload.any(), async (req, res) => {
             details: err.message 
         });
     }
-});
+};
+
+app.post(['/api/crear-pdf', '/'], upload.any(), handleCreatePdf);
 
 /**
  * Función en segundo plano para extraer imágenes Base64 de un HTML y guardarlas en disco

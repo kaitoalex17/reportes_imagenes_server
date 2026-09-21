@@ -8,10 +8,14 @@ const IMAGES_DIR = path.join(STORAGE_DIR, 'images');
 const PDFS_DIR = path.join(STORAGE_DIR, 'pdfs');
 const TEMP_DIR = path.join(STORAGE_DIR, 'temp');
 
-// Asegurar existencia de directorios
+// Asegurar existencia de directorios con tolerancia a fallos
 [IMAGES_DIR, PDFS_DIR, TEMP_DIR].forEach(dir => {
-    if (!fs.existsSync(dir)) {
-        fs.mkdirSync(dir, { recursive: true });
+    try {
+        if (!fs.existsSync(dir)) {
+            fs.mkdirSync(dir, { recursive: true });
+        }
+    } catch (e) {
+        console.warn(`[Storage] Aviso al inicializar directorio ${dir}:`, e.message);
     }
 });
 
