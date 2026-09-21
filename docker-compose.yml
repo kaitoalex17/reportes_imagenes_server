@@ -1,0 +1,38 @@
+version: '3.8'
+
+services:
+  reportes-pdf-server:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: kaitoalex17/reportes_imagenes_server:latest
+    container_name: reportes_imagenes_server
+    restart: unless-stopped
+    ports:
+      - "3394:3394"
+    volumes:
+      - ./storage:/app/storage
+    environment:
+      - NODE_ENV=production
+      - PORT=3394
+      - HOST=0.0.0.0
+      - RETENTION_DAYS_IMAGES=15
+      - RETENTION_DAYS_PDFS=7
+      - CLEANUP_CRON_SCHEDULE=0 3 * * *
+      - MAX_BODY_SIZE_MB=150
+      - FIREBASE_PROJECT_ID=calculadora-olin
+      - FIREBASE_CONFIG_COLLECTION=configuracion
+      - FIREBASE_CONFIG_DOC=generadorImagenes
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: 1536M
+        reservations:
+          cpus: '0.25'
+          memory: 256M
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
