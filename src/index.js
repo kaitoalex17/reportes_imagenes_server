@@ -38,7 +38,10 @@ app.use(express.urlencoded({ limit: `${MAX_SIZE_MB}mb`, extended: true }));
 // Configuración de Multer para recepción de archivos multipart
 const upload = multer({
     storage: multer.memoryStorage(),
-    limits: { fileSize: MAX_SIZE_MB * 1024 * 1024 }
+    limits: { 
+        fileSize: MAX_SIZE_MB * 1024 * 1024,
+        fieldSize: MAX_SIZE_MB * 1024 * 1024
+    }
 });
 
 // Servir estáticos para acceso directo a imágenes y PDFs de cada orden
@@ -164,6 +167,48 @@ app.get('/api/media', async (req, res) => {
     } catch (err) {
         console.error('[API] Error al listar medias:', err);
         res.status(500).json({ error: 'Error al listar las medias del servidor.', details: err.message });
+    }
+});
+
+app.get('/api/media/:orderNumber', async (req, res) => {
+    try {
+        const orderNum = path.basename(req.params.orderNumber).trim().replace(/[^a-zA-Z0-9_\-]/g, '_');
+        const orderDirPath = path.join(IMAGES_DIR, orderNum);
+
+        if (!fs.existsSync(orderDirPath)) {
+            return res.status(404).json({ exists: false, error: 'Orden no encontrada en almacenamiento.' });
+        }
+
+        const files = fs.readdirSync(orderDirPath);
+        const imageFiles = files.filter(f => /\.(jpe?g|png|webp)$/i.test(f));
+        const pdfFile = files.find(f => f.toLowerCase().endsWith('.pdf')) || `Informe_${orderNum}.pdf`;
+
+        let metadata = null;
+        const metaPath = path.join(orderDirPath, 'metadata.json');
+        if (fs.existsSync(metaPath)) {
+            try {
+                metadata = JSON.parse(fs.readFileSync(metaPath, 'utf8'));
+            } catch (e) {}
+        }
+
+        const stat = fs.statSync(orderDirPath);
+
+        res.json({
+            exists: true,
+            numeroOrden: orderNum,
+            totalImagenes: imageFiles.length,
+            imagenes: imageFiles.map(img => ({
+                nombre: img,
+                url: `https://apimg.instala.net/storage/images/${orderNum}/${img}`
+            })),
+            pdfGenerado: pdfFile,
+            urlPdf: `https://apimg.instala.net/api/descargar-pdf/${pdfFile}`,
+            fechaCreacion: metadata?.fechaCreacion || stat.birthtime || stat.mtime,
+            metadata: metadata
+        });
+    } catch (err) {
+        console.error(`[API] Error obteniendo media de orden ${req.params.orderNumber}:`, err);
+        res.status(500).json({ error: 'Error al consultar la orden.', details: err.message });
     }
 });
 
