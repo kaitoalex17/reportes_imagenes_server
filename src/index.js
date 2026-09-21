@@ -100,6 +100,74 @@ app.get('/api/descargar-pdf/:nombre', (req, res) => {
 });
 
 // =====================================================================
+// RUTA DE EXPLORADOR DE MEDIAS ALMACENADAS (/api/media)
+// =====================================================================
+
+app.get('/api/media', async (req, res) => {
+    try {
+        const config = await getActiveConfig();
+        const orders = [];
+
+        if (fs.existsSync(IMAGES_DIR)) {
+            const entries = fs.readdirSync(IMAGES_DIR, { withFileTypes: true });
+            for (const entry of entries) {
+                if (entry.isDirectory()) {
+                    const orderNum = entry.name;
+                    const orderDirPath = path.join(IMAGES_DIR, orderNum);
+                    try {
+                        const orderFiles = fs.readdirSync(orderDirPath);
+                        const imageFiles = orderFiles.filter(f => /\.(jpe?g|png|webp)$/i.test(f));
+                        const pdfFile = orderFiles.find(f => f.toLowerCase().endsWith('.pdf')) || `Informe_${orderNum}.pdf`;
+                        const pdfExistsInPdfsDir = fs.existsSync(path.join(PDFS_DIR, pdfFile));
+                        const stat = fs.statSync(orderDirPath);
+
+                        let metadata = null;
+                        const metaPath = path.join(orderDirPath, 'metadata.json');
+                        if (fs.existsSync(metaPath)) {
+                            try {
+                                metadata = JSON.parse(fs.readFileSync(metaPath, 'utf8'));
+                            } catch (e) {}
+                        }
+
+                        orders.push({
+                            numeroOrden: orderNum,
+                            carpeta: `storage/images/${orderNum}`,
+                            urlCarpeta: `https://apimg.instala.net/storage/images/${orderNum}`,
+                            totalImagenes: imageFiles.length,
+                            imagenes: imageFiles.map(img => ({
+                                nombre: img,
+                                url: `https://apimg.instala.net/storage/images/${orderNum}/${img}`
+                            })),
+                            pdfGenerado: pdfFile,
+                            urlPdf: `https://apimg.instala.net/api/descargar-pdf/${pdfFile}`,
+                            pdfDisponible: pdfExistsInPdfsDir || fs.existsSync(path.join(orderDirPath, pdfFile)),
+                            fechaCreacion: metadata?.fechaCreacion || stat.birthtime || stat.mtime,
+                            metadata: metadata
+                        });
+                    } catch (readErr) {
+                        console.warn(`[API] Error leyendo carpeta de orden ${orderNum}:`, readErr.message);
+                    }
+                }
+            }
+        }
+
+        // Ordenar por fecha de creación más reciente
+        orders.sort((a, b) => new Date(b.fechaCreacion).getTime() - new Date(a.fechaCreacion).getTime());
+
+        res.json({
+            status: 'ok',
+            totalOrdenes: orders.length,
+            diasRetencionImagenes: config.diasRetencionImagenes,
+            diasRetencionPdfs: config.diasRetencionPdfs,
+            ordenes: orders
+        });
+    } catch (err) {
+        console.error('[API] Error al listar medias:', err);
+        res.status(500).json({ error: 'Error al listar las medias del servidor.', details: err.message });
+    }
+});
+
+// =====================================================================
 // RUTA PRINCIPAL: /api/crear-pdf
 // Compatible con procesado-imagen-v3.html y el servidor original
 // =====================================================================
@@ -163,6 +231,12 @@ const handleCreatePdf = async (req, res) => {
         try {
             const pdfCopyInOrder = path.join(orderImageDir, pdfResult.pdfFileName);
             fs.copyFileSync(pdfResult.pdfPath, pdfCopyInOrder);
+            fs.writeFileSync(path.join(orderImageDir, 'metadata.json'), JSON.stringify({
+                numeroOrden: safeOrderNumber,
+                pdfGenerado: pdfResult.pdfFileName,
+                fechaCreacion: new Date().toISOString(),
+                totalImagenes: savedImagesCount || 1
+            }, null, 2));
         } catch (e) { /* ignorar */ }
 
         // Registrar la orden en Firestore justo debajo de configuracion/ordenesImagenes

@@ -13,11 +13,17 @@ function generateReportHtml(options) {
         includeIndex = false,
         logoBase64 = '',
         logoType = 'netdata',
-        images = []
+        images = [],
+        ocultarPieSinDescripcion = false,
+        mostrarCoordenadas = true,
+        mostrarFechaHora = true,
+        mostrarNumeroFoto = true,
+        colorAcento = '#2563eb'
     } = options;
 
     const brandName = logoType === 'olin' ? 'Olin Telecom' : 'NetData PEX';
     const isSingle = parseInt(imagesPerPage, 10) === 1;
+    const accentColor = colorAcento || '#2563eb';
 
     // Construcción del documento
     let html = `<!DOCTYPE html>
@@ -50,7 +56,7 @@ function generateReportHtml(options) {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            border-bottom: 2px solid #2563eb;
+            border-bottom: 2px solid ${accentColor};
             padding-bottom: 10px;
             margin-bottom: 16px;
         }
@@ -64,7 +70,7 @@ function generateReportHtml(options) {
         .header-logo-fallback {
             font-size: 20px;
             font-weight: 800;
-            color: #2563eb;
+            color: ${accentColor};
             letter-spacing: -0.5px;
             text-transform: uppercase;
         }
@@ -147,7 +153,7 @@ function generateReportHtml(options) {
         .photo-number {
             font-size: 11px;
             font-weight: 800;
-            color: #2563eb;
+            color: ${accentColor};
             text-transform: uppercase;
             letter-spacing: 0.5px;
         }
@@ -179,9 +185,31 @@ function generateReportHtml(options) {
 
         .photo-concept-box {
             background-color: #f8fafc;
-            border-left: 4px solid #2563eb;
+            border-left: 4px solid ${accentColor};
             border-radius: 0 6px 6px 0;
             padding: 8px 12px;
+        }
+
+        .photo-location-box {
+            margin-top: 6px;
+            background-color: #f0fdf4;
+            border: 1px solid #bbf7d0;
+            border-radius: 6px;
+            padding: 6px 10px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 10px;
+            color: #166534;
+            font-weight: 600;
+        }
+
+        .photo-map-preview {
+            width: 120px;
+            height: 70px;
+            border-radius: 4px;
+            object-fit: cover;
+            border: 1px solid #cbd5e1;
         }
 
         .concept-title {
@@ -306,22 +334,43 @@ function generateReportHtml(options) {
 
         chunk.forEach((img, subIdx) => {
             const globalIndex = i + subIdx + 1;
-            const desc = img.description || 'Registro fotográfico de intervención';
-            const timeStr = img.date ? `Captura: ${escapeHtml(img.date)}` : '';
+            const desc = (img.description || '').trim();
+            const hasDesc = desc.length > 0 && desc !== 'Sin descripción' && desc !== 'Registro fotográfico de intervención';
+            const timeStr = (mostrarFechaHora && img.date) ? `Captura: ${escapeHtml(img.date)}` : '';
+            const showDescBox = !ocultarPieSinDescripcion || hasDesc;
+
+            let locationHtml = '';
+            if (mostrarCoordenadas && img.location) {
+                const lat = Number(img.location.lat).toFixed(6);
+                const lng = Number(img.location.lng).toFixed(6);
+                const mapImg = img.location.mapPreview 
+                    ? `<img src="${img.location.mapPreview}" class="photo-map-preview" alt="Mapa satélite">` 
+                    : '';
+                locationHtml = `
+                <div class="photo-location-box">
+                    ${mapImg}
+                    <div>
+                        <div style="font-weight:700; text-transform:uppercase; font-size:9px; color:#15803d;">Ubicación GPS Satélite</div>
+                        <div>Lat: ${lat}, Lon: ${lng}</div>
+                    </div>
+                </div>`;
+            }
 
             html += `
             <div class="photo-card">
                 <div class="photo-header">
-                    <span class="photo-number">Fotografía #${String(globalIndex).padStart(2, '0')}</span>
+                    ${mostrarNumeroFoto ? `<span class="photo-number">Fotografía #${String(globalIndex).padStart(2, '0')}</span>` : '<span></span>'}
                     ${timeStr ? `<span class="photo-timestamp">${timeStr}</span>` : ''}
                 </div>
                 <div class="photo-img-wrap">
                     <img src="${img.src}" alt="Foto ${globalIndex}">
                 </div>
+                ${showDescBox ? `
                 <div class="photo-concept-box">
                     <div class="concept-title">Concepto de Mantenimiento / Observaciones</div>
-                    <div class="concept-text">${escapeHtml(desc)}</div>
-                </div>
+                    <div class="concept-text">${escapeHtml(desc || 'Sin descripción')}</div>
+                </div>` : ''}
+                ${locationHtml}
             </div>`;
         });
 
