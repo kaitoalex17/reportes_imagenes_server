@@ -34,7 +34,7 @@ function generateReportHtml(options) {
     <style>
         @page {
             size: A4 portrait;
-            margin: 14mm 12mm 16mm 12mm;
+            margin: 12mm 12mm 14mm 12mm;
         }
 
         *, *::before, *::after {
@@ -47,8 +47,10 @@ function generateReportHtml(options) {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
             color: #1e293b;
             background-color: #ffffff;
-            font-size: 12px;
-            line-height: 1.4;
+            font-size: 11px;
+            line-height: 1.35;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
         }
 
         /* ── CABECERA DE PÁGINA ── */
@@ -56,19 +58,19 @@ function generateReportHtml(options) {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            border-bottom: 2px solid ${accentColor};
-            padding-bottom: 10px;
-            margin-bottom: 16px;
+            border-bottom: 2.5px solid ${accentColor};
+            padding-bottom: 8px;
+            margin-bottom: 12px;
         }
 
         .header-logo-wrap img {
-            max-height: 44px;
+            max-height: 42px;
             width: auto;
             display: block;
         }
 
         .header-logo-fallback {
-            font-size: 20px;
+            font-size: 18px;
             font-weight: 800;
             color: ${accentColor};
             letter-spacing: -0.5px;
@@ -80,10 +82,10 @@ function generateReportHtml(options) {
         }
 
         .header-meta h1 {
-            font-size: 16px;
+            font-size: 15px;
             font-weight: 800;
             color: #0f172a;
-            letter-spacing: 0.2px;
+            letter-spacing: 0.3px;
             text-transform: uppercase;
             margin-bottom: 3px;
         }
@@ -97,11 +99,11 @@ function generateReportHtml(options) {
 
         .badge {
             display: inline-block;
-            padding: 3px 8px;
+            padding: 2.5px 7px;
             border-radius: 4px;
-            font-size: 10px;
+            font-size: 9.5px;
             font-weight: 700;
-            letter-spacing: 0.3px;
+            letter-spacing: 0.2px;
         }
 
         .badge-order {
@@ -126,32 +128,31 @@ function generateReportHtml(options) {
         .page-body {
             display: flex;
             flex-direction: column;
-            gap: 16px;
-            min-height: ${isSingle ? '820px' : '820px'};
+            gap: 12px;
         }
 
         .photo-card {
             background: #ffffff;
             border: 1px solid #cbd5e1;
             border-radius: 8px;
-            padding: 10px;
+            padding: 8px 10px;
             display: flex;
             flex-direction: column;
             page-break-inside: avoid;
-            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
         }
 
         .photo-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 8px;
-            padding-bottom: 6px;
+            margin-bottom: 6px;
+            padding-bottom: 4px;
             border-bottom: 1px solid #f1f5f9;
         }
 
         .photo-number {
-            font-size: 11px;
+            font-size: 10.5px;
             font-weight: 800;
             color: ${accentColor};
             text-transform: uppercase;
@@ -159,63 +160,59 @@ function generateReportHtml(options) {
         }
 
         .photo-timestamp {
-            font-size: 10px;
+            font-size: 9.5px;
             color: #64748b;
             font-weight: 600;
         }
 
         .photo-img-wrap {
             width: 100%;
-            height: ${isSingle ? '600px' : '285px'};
+            height: ${isSingle ? '510px' : '225px'};
             display: flex;
             align-items: center;
             justify-content: center;
-            background-color: #0f172a;
+            background-color: #0b1120;
             border-radius: 6px;
             overflow: hidden;
-            margin-bottom: 8px;
         }
 
         .photo-img-wrap img {
             max-width: 100%;
             max-height: 100%;
+            border-radius: 4px;
             object-fit: contain;
             display: block;
         }
 
-        .photo-concept-box {
-            background-color: #f8fafc;
-            border-left: 4px solid ${accentColor};
-            border-radius: 0 6px 6px 0;
-            padding: 8px 12px;
+        /* ── PIE DE TARJETA SPLIT (Descripción 60% / Satélite 40%) ── */
+        .card-footer {
+            display: flex;
+            gap: 10px;
+            margin-top: 8px;
+            align-items: stretch;
         }
 
-        .photo-location-box {
-            margin-top: 6px;
-            background-color: #f0fdf4;
-            border: 1px solid #bbf7d0;
+        .desc-card {
+            flex: 1;
+            min-width: 0;
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-left: 4px solid ${accentColor};
             border-radius: 6px;
             padding: 6px 10px;
             display: flex;
-            align-items: center;
-            gap: 8px;
-            font-size: 10px;
-            color: #166534;
-            font-weight: 600;
+            flex-direction: column;
+            justify-content: center;
         }
 
-        .photo-map-preview {
-            width: 120px;
-            height: 70px;
-            border-radius: 4px;
-            object-fit: cover;
-            border: 1px solid #cbd5e1;
+        .desc-card.full-width {
+            width: 100%;
         }
 
         .concept-title {
-            font-size: 9px;
-            font-weight: 700;
-            color: #64748b;
+            font-size: 8px;
+            font-weight: 800;
+            color: ${accentColor};
             text-transform: uppercase;
             letter-spacing: 0.5px;
             margin-bottom: 2px;
@@ -224,7 +221,64 @@ function generateReportHtml(options) {
         .concept-text {
             font-size: 11px;
             font-weight: 600;
+            color: #1e293b;
+            line-height: 1.35;
+            word-break: break-word;
+        }
+
+        .location-card {
+            width: ${isSingle ? '220px' : '175px'};
+            flex-shrink: 0;
+            background: #f0fdf4;
+            border: 1px solid #bbf7d0;
+            border-radius: 6px;
+            padding: 5px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+        }
+
+        .location-card.full-width {
+            width: 100%;
+            flex-direction: row;
+            gap: 12px;
+            justify-content: flex-start;
+            padding: 6px 10px;
+            text-align: left;
+        }
+
+        .photo-map-preview {
+            width: 100%;
+            height: 70px;
+            border-radius: 4px;
+            object-fit: cover;
+            border: 1px solid #cbd5e1;
+            display: block;
+        }
+
+        .location-card.full-width .photo-map-preview {
+            width: 120px;
+            height: 65px;
+            flex-shrink: 0;
+        }
+
+        .location-tag {
+            font-size: 8px;
+            font-weight: 800;
+            color: #166534;
+            text-transform: uppercase;
+            letter-spacing: 0.4px;
+            margin-top: 3px;
+        }
+
+        .location-coords {
+            font-size: 9.5px;
+            font-weight: 700;
             color: #0f172a;
+            white-space: nowrap;
+            margin-top: 1px;
         }
 
         /* ── ÍNDICE FOTOGRÁFICO ── */
@@ -233,10 +287,10 @@ function generateReportHtml(options) {
         }
 
         .index-title {
-            font-size: 15px;
+            font-size: 16px;
             font-weight: 800;
             color: #0f172a;
-            margin-bottom: 12px;
+            margin-bottom: 14px;
             padding-bottom: 6px;
             border-bottom: 1px solid #e2e8f0;
         }
@@ -245,15 +299,15 @@ function generateReportHtml(options) {
             width: 100%;
             border-collapse: collapse;
             font-size: 11px;
+            margin-bottom: 20px;
         }
 
         .index-table th {
-            background-color: #f1f5f9;
-            color: #334155;
+            background-color: ${accentColor};
+            color: #ffffff;
             font-weight: 700;
             padding: 8px 10px;
             text-align: left;
-            border-bottom: 2px solid #cbd5e1;
         }
 
         .index-table td {
@@ -339,19 +393,49 @@ function generateReportHtml(options) {
             const timeStr = (mostrarFechaHora && img.date) ? `Captura: ${escapeHtml(img.date)}` : '';
             const showDescBox = !ocultarPieSinDescripcion || hasDesc;
 
-            let locationHtml = '';
-            if (mostrarCoordenadas && img.location) {
+            const hasLocation = Boolean(mostrarCoordenadas && img.location && img.location.lat && img.location.lng);
+
+            let footerHtml = '';
+            if (showDescBox && hasLocation) {
                 const lat = Number(img.location.lat).toFixed(6);
                 const lng = Number(img.location.lng).toFixed(6);
                 const mapImg = img.location.mapPreview 
-                    ? `<img src="${img.location.mapPreview}" class="photo-map-preview" alt="Mapa satélite">` 
+                    ? `<img src="${img.location.mapPreview}" class="photo-map-preview" alt="Satélite">` 
                     : '';
-                locationHtml = `
-                <div class="photo-location-box">
-                    ${mapImg}
-                    <div>
-                        <div style="font-weight:700; text-transform:uppercase; font-size:9px; color:#15803d;">Ubicación GPS Satélite</div>
-                        <div>Lat: ${lat}, Lon: ${lng}</div>
+                footerHtml = `
+                <div class="card-footer">
+                    <div class="desc-card">
+                        <div class="concept-title">Concepto / Observaciones</div>
+                        <div class="concept-text">${escapeHtml(desc || 'Sin descripción')}</div>
+                    </div>
+                    <div class="location-card">
+                        ${mapImg}
+                        <div class="location-tag">Ubicación GPS Satélite</div>
+                        <div class="location-coords">Lat: ${lat}, Lon: ${lng}</div>
+                    </div>
+                </div>`;
+            } else if (showDescBox) {
+                footerHtml = `
+                <div class="card-footer">
+                    <div class="desc-card full-width">
+                        <div class="concept-title">Concepto / Observaciones</div>
+                        <div class="concept-text">${escapeHtml(desc || 'Sin descripción')}</div>
+                    </div>
+                </div>`;
+            } else if (hasLocation) {
+                const lat = Number(img.location.lat).toFixed(6);
+                const lng = Number(img.location.lng).toFixed(6);
+                const mapImg = img.location.mapPreview 
+                    ? `<img src="${img.location.mapPreview}" class="photo-map-preview" alt="Satélite">` 
+                    : '';
+                footerHtml = `
+                <div class="card-footer">
+                    <div class="location-card full-width">
+                        ${mapImg}
+                        <div>
+                            <div class="location-tag">Ubicación GPS Satélite</div>
+                            <div class="location-coords">Lat: ${lat}, Lon: ${lng}</div>
+                        </div>
                     </div>
                 </div>`;
             }
@@ -365,12 +449,7 @@ function generateReportHtml(options) {
                 <div class="photo-img-wrap">
                     <img src="${img.src}" alt="Foto ${globalIndex}">
                 </div>
-                ${showDescBox ? `
-                <div class="photo-concept-box">
-                    <div class="concept-title">Concepto de Mantenimiento / Observaciones</div>
-                    <div class="concept-text">${escapeHtml(desc || 'Sin descripción')}</div>
-                </div>` : ''}
-                ${locationHtml}
+                ${footerHtml}
             </div>`;
         });
 
